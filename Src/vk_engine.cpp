@@ -91,24 +91,20 @@ void VulkanEngine::init_pipelines()
 
 void VulkanEngine::init_triangle_pipeline()
 {
-	VkShaderModule triangleFragShader;
-	if (vkutils::load_shader_module("../Src/colored_triangle.frag.spv", _device, &triangleFragShader))
+	VkShaderModule triangleFragShader = VK_NULL_HANDLE;
+	VkShaderModule triangleVertexShader = VK_NULL_HANDLE; 
+
+	if (!vkutils::load_shader_module("../Src/colored_triangle.frag.spv", _device, &triangleFragShader))
 	{
 		std::cout << "Error when building the triangle fragment shader module" << std::endl;
-	}
-	else
-	{
-		std::cout << "Triangle fragment shader succesfully loaded" << std::endl;
+		return; 
 	}
 
-	VkShaderModule triangleVertexShader;
-	if (vkutils::load_shader_module("../Src/colored_triangle.vert.spv", _device, &triangleVertexShader))
+	if (!vkutils::load_shader_module("../Src/colored_triangle.vert.spv", _device, &triangleVertexShader))
 	{
 		std::cout << "Error when building the triangle vertex shader module" << std::endl;
-	}
-	else
-	{
-		std::cout << "Triangle vertex shader succesfully loaded" << std::endl;
+		vkDestroyShaderModule(_device, triangleFragShader, nullptr); 
+		return;
 	}
 
 	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();

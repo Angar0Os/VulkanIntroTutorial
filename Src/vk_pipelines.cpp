@@ -8,6 +8,7 @@ VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShad
 	VkPipelineShaderStageCreateInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	info.pNext = nullptr;
+	info.pName = "main";
 
 	info.stage = stage;
 	info.module = shaderModule;
@@ -124,7 +125,7 @@ void PipelineBuilder::set_shaders(VkShaderModule vertexShader, VkShaderModule fr
 	_shaderStages.clear();
 
 	_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, vertexShader));
-	_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, fragmentShader));
+	_shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader));
 }
 
 void PipelineBuilder::set_input_topology(VkPrimitiveTopology topology)
