@@ -5,7 +5,7 @@
 int main(int argc, char** argv)
 {
 	vkEngine.init();	
-
+	
 	do {
 		glfwPollEvents();
 

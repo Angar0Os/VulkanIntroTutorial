@@ -61,5 +61,11 @@
     <CustomBuild Include="..\Src\gradient.comp">
       <Filter>Source Files\src</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\Src\colored_triangle.frag">
+      <Filter>Source Files\src</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Src\colored_triangle.vert">
+      <Filter>Source Files\src</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

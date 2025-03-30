@@ -12,6 +12,13 @@
 
 struct GLFWwindow;
 
+namespace vkinit
+{
+	VkPipelineLayoutCreateInfo pipeline_layout_create_info();
+	VkRenderingAttachmentInfo attachment_info(VkImageView view, VkClearValue* clear, VkImageLayout layout);
+	VkRenderingInfo	rendering_info(VkExtent2D renderExtent, VkRenderingAttachmentInfo* colorAttachment, VkRenderingAttachmentInfo* depthAttachment);
+}
+
 struct AllocatedImage 
 {
 	VkImage image;
@@ -53,6 +60,8 @@ public:
 
 	VkPipeline _gradientPipeline;
 	VkPipelineLayout _gradientPipelineLayout;
+	VkPipelineLayout _trianglePipelineLayout;
+	VkPipeline _trianglePipeline;
 
 	DescriptorAllocator globalDescriptorAllocator;
 
@@ -69,6 +78,7 @@ public:
 	void init();
 	void draw();
 	void cleanup();
+	void draw_geometry(VkCommandBuffer cmd);
 	void draw_background(VkCommandBuffer cmd);
 
 	unsigned int _frameNumber = 0;
@@ -114,6 +124,7 @@ private:
 	void init_descriptors();
 
 	void init_pipelines();
+	void init_triangle_pipeline();
 	void init_background_pipelines();
 
 	void create_swapchain(uint32_t width, uint32_t height);
