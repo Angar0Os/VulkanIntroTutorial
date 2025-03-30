@@ -30,7 +30,10 @@
     <ClCompile Include="..\Src\vk_images.cpp">
       <Filter>Source Files\src</Filter>
     </ClCompile>
-    <ClCompile Include="vk_descriptors.cpp">
+    <ClCompile Include="..\Src\vk_descriptors.cpp">
+      <Filter>Source Files\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\vk_pipelines.cpp">
       <Filter>Source Files\src</Filter>
     </ClCompile>
   </ItemGroup>
@@ -47,8 +50,16 @@
     <ClInclude Include="..\Src\vk_images.h">
       <Filter>Source Files\src</Filter>
     </ClInclude>
-    <ClInclude Include="vk_descriptors.h">
+    <ClInclude Include="..\Src\vk_descriptors.h">
       <Filter>Source Files\src</Filter>
     </ClInclude>
+    <ClInclude Include="..\Src\vk_pipelines.h">
+      <Filter>Source Files\src</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\Src\gradient.comp">
+      <Filter>Source Files\src</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

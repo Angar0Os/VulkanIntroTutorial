@@ -7,6 +7,9 @@
 
 #include <vma/vk_mem_alloc.h>
 
+#include <vk_descriptors.h>
+#include <vk_pipelines.h>
+
 struct GLFWwindow;
 
 struct AllocatedImage 
@@ -47,6 +50,14 @@ public:
 	VkDevice _device; 
 	VkSurfaceKHR _surface;
 	VkAllocationCallbacks* _callBacks;
+
+	VkPipeline _gradientPipeline;
+	VkPipelineLayout _gradientPipelineLayout;
+
+	DescriptorAllocator globalDescriptorAllocator;
+
+	VkDescriptorSet _drawImageDescriptors;
+	VkDescriptorSetLayout _drawImageDescriptorLayout;
 	
 	VkSwapchainKHR _swapchain;
 	VkFormat _swapchainImageFormat;
@@ -99,6 +110,11 @@ private:
 	void init_swapchain();
 	void init_command();
 	void init_sync_structures();
+
+	void init_descriptors();
+
+	void init_pipelines();
+	void init_background_pipelines();
 
 	void create_swapchain(uint32_t width, uint32_t height);
 	void destroy_swapchain();
