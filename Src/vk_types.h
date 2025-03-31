@@ -1,9 +1,10 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <vma/vk_mem_alloc.h>
 #include <glm/glm.hpp>
 
-struct AllocatedBuffer
+struct AllocatedBuffer 
 {
 	VkBuffer buffer;
 	VmaAllocation allocation;

@@ -139,10 +139,12 @@
     <ClCompile Include="..\Src\vk_engine.cpp" />
     <ClCompile Include="..\Src\vk_images.cpp" />
     <ClCompile Include="..\Src\vk_initializers.cpp" />
+    <ClCompile Include="..\Src\vk_loader.cpp" />
     <ClCompile Include="..\Src\vk_pipelines.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Src\vk_initializers.h" />
+    <ClInclude Include="..\Src\vk_loader.h" />
     <ClInclude Include="..\Src\vk_pipelines.h" />
     <ClInclude Include="..\Src\VkBootstrap.h" />
     <ClInclude Include="..\Src\VkBootstrapDispatch.h" />

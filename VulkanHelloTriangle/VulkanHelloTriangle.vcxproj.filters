@@ -39,6 +39,9 @@
     <ClCompile Include="..\Src\vk_initializers.cpp">
       <Filter>Source Files\src</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\vk_loader.cpp">
+      <Filter>Source Files\src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Src\VkBootstrap.h">
@@ -63,6 +66,9 @@
       <Filter>Source Files\src</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\vk_types.h">
+      <Filter>Source Files\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\vk_loader.h">
       <Filter>Source Files\src</Filter>
     </ClInclude>
   </ItemGroup>
