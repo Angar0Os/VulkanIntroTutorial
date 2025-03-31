@@ -67,13 +67,16 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\Src\gradient.comp">
+    <CustomBuild Include="..\Src\gradient_color.comp">
       <Filter>Source Files\src</Filter>
     </CustomBuild>
     <CustomBuild Include="..\Src\colored_triangle.frag">
       <Filter>Source Files\src</Filter>
     </CustomBuild>
     <CustomBuild Include="..\Src\colored_triangle.vert">
+      <Filter>Source Files\src</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Src\sky.comp">
       <Filter>Source Files\src</Filter>
     </CustomBuild>
   </ItemGroup>
