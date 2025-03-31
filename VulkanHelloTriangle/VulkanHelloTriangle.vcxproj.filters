@@ -79,5 +79,8 @@
     <CustomBuild Include="..\Src\sky.comp">
       <Filter>Source Files\src</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\Src\colored_triangle_mesh.vert">
+      <Filter>Source Files\src</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

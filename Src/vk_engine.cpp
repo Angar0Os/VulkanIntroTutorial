@@ -3,6 +3,8 @@
 #include <vk_pipelines.h>
 #include <vk_initializers.h>
 
+#include <array>
+
 #include <iostream>
 
 #define VMA_IMPLEMENTATION
@@ -39,7 +41,9 @@ void VulkanEngine::init()
 void VulkanEngine::init_pipelines()
 {
 	init_background_pipelines();
+
 	init_triangle_pipeline();
+	init_mesh_pipeline();
 }
 
 void VulkanEngine::init_triangle_pipeline()
@@ -344,6 +348,17 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 
 	vkCmdDraw(cmd, 3, 1, 0, 0);
 
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
+
+	GPUDrawPushConstants push_constants;
+	push_constants.worldMatrix = glm::mat4{ 1.f };
+	push_constants.vertexBuffer = rectangle.vertexBufferAddress;
+
+	vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &push_constants);
+	vkCmdBindIndexBuffer(cmd, rectangle.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+	vkCmdDrawIndexed(cmd, 6, 1, 0, 0, 0);
+
 	vkCmdEndRendering(cmd);
 }
 
@@ -520,6 +535,93 @@ void VulkanEngine::init_background_pipelines()
 		vkDestroyPipelineLayout(_device, _gradientPipelineLayout, nullptr);
 		vkDestroyPipeline(_device, sky.pipeline, nullptr);
 		vkDestroyPipeline(_device, gradient.pipeline, nullptr);
+		});
+}
+
+void VulkanEngine::init_mesh_pipeline()
+{
+	VkShaderModule triangleFragShader = VK_NULL_HANDLE;
+	VkShaderModule triangleVertexShader = VK_NULL_HANDLE;
+
+	if (!vkutils::load_shader_module("../Src/colored_triangle.frag.spv", _device, &triangleFragShader))
+	{
+		std::cout << "Error when building the triangle fragment shader module" << std::endl;
+		return;
+	}
+
+	if (!vkutils::load_shader_module("../Src/colored_triangle_mesh.vert.spv", _device, &triangleVertexShader))
+	{
+		std::cout << "Error when building the triangle vertex shader module" << std::endl;
+		vkDestroyShaderModule(_device, triangleFragShader, nullptr);
+		return;
+	}
+
+	VkPushConstantRange bufferRange{};
+	bufferRange.offset = 0;	
+	bufferRange.size = sizeof(GPUDrawPushConstants);
+	bufferRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
+	pipeline_layout_info.pPushConstantRanges = &bufferRange;
+	pipeline_layout_info.pushConstantRangeCount = 1;
+
+	vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_meshPipelineLayout);
+
+	PipelineBuilder pipelineBuilder;
+
+	pipelineBuilder._pipelineLayout = _meshPipelineLayout;
+	pipelineBuilder.set_shaders(triangleVertexShader, triangleFragShader);
+	pipelineBuilder.set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+	pipelineBuilder.set_polygon_mode(VK_POLYGON_MODE_FILL);
+	pipelineBuilder.set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+	pipelineBuilder.set_multisampling_none();
+	pipelineBuilder.disable_blending();
+
+	pipelineBuilder.disable_depthtest();
+
+	pipelineBuilder.set_color_attachment_format(_drawImage.imageFormat);
+	pipelineBuilder.set_depth_format(VK_FORMAT_UNDEFINED);
+
+	_meshPipeline = pipelineBuilder.build_pipeline(_device);
+
+	vkDestroyShaderModule(_device, triangleFragShader, nullptr);
+	vkDestroyShaderModule(_device, triangleVertexShader, nullptr);
+
+	_mainDeletionQueue.push_function([&]() {
+		vkDestroyPipelineLayout(_device, _meshPipelineLayout, nullptr);
+		vkDestroyPipeline(_device, _meshPipeline, nullptr);
+		});
+}
+
+void VulkanEngine::init_default_data()
+{
+	std::array<Vertex, 4> rect_vertices;
+
+	rect_vertices[0].position = { 0.5,-0.5, 0 };
+	rect_vertices[1].position = { 0.5,0.5, 0 };
+	rect_vertices[2].position = { -0.5,-0.5, 0 };
+	rect_vertices[3].position = { -0.5,0.5, 0 };
+
+	rect_vertices[0].color = { 0,0, 0,1 };
+	rect_vertices[1].color = { 0.5,0.5,0.5 ,1 };
+	rect_vertices[2].color = { 1,0, 0,1 };
+	rect_vertices[3].color = { 0,1, 0,1 };
+
+	std::array<uint32_t, 6> rect_indices;
+
+	rect_indices[0] = 0;
+	rect_indices[1] = 1;
+	rect_indices[2] = 2;
+
+	rect_indices[3] = 2;
+	rect_indices[4] = 1;
+	rect_indices[5] = 3;
+
+	rectangle = uploadMesh(rect_indices, rect_vertices);
+
+	_mainDeletionQueue.push_function([&]() {
+		destroy_buffer(rectangle.indexBuffer);
+		destroy_buffer(rectangle.vertexBuffer);
 		});
 }
 

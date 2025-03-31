@@ -7,10 +7,10 @@
 
 #include <vma/vk_mem_alloc.h>
 
+#include <vk_types.h>
+
 #include <vk_descriptors.h>
 #include <vk_pipelines.h>
-
-#include <vk_types.h>
 
 #include <glm/glm.hpp>
 
@@ -128,6 +128,11 @@ public:
 
 	AllocatedImage _drawImage;
 	VkExtent2D _drawExtent;
+
+	VkPipelineLayout _meshPipelineLayout;
+	VkPipeline _meshPipeline;
+
+	GPUMeshBuffers rectangle;
 private:
 	bool _isInitilized = false;
 
@@ -141,6 +146,8 @@ private:
 	void init_pipelines();
 	void init_triangle_pipeline();
 	void init_background_pipelines();
+	void init_mesh_pipeline();
+	void init_default_data();
 
 	void create_swapchain(uint32_t width, uint32_t height);
 	void destroy_swapchain();

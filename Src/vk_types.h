@@ -10,7 +10,7 @@ struct AllocatedBuffer
 	VmaAllocationInfo info;
 };
 
-struct Vertex
+struct Vertex 
 {
 	glm::vec3 position;
 	float uv_x;
