@@ -1,5 +1,5 @@
 #include <vk_images.h>
-#include <vk_engine.h>
+#include <vk_initializers.h>
 
 void vkutils::transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout)
 {
@@ -15,7 +15,7 @@ void vkutils::transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout
 	imageBarrier.newLayout = newLayout = newLayout;
 
 	VkImageAspectFlags aspectMask = (newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-	imageBarrier.subresourceRange = vkEngine.image_subresource_range(aspectMask);
+	imageBarrier.subresourceRange = vkinit::image_subresource_range(aspectMask);
 	imageBarrier.image = image;
 
 	VkDependencyInfo depInfo {};

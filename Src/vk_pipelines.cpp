@@ -1,21 +1,8 @@
 #include <vk_pipelines.h>
+#include <vk_initializers.h>
+
 #include <fstream>
-
 #include <iostream>
-
-VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShaderStageFlagBits stage, VkShaderModule shaderModule)
-{
-	VkPipelineShaderStageCreateInfo info{};
-	info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	info.pNext = nullptr;
-	info.pName = "main";
-
-	info.stage = stage;
-	info.module = shaderModule;
-	return info;
-}
-
-
 
 bool vkutils::load_shader_module(const char* filePath, VkDevice device, VkShaderModule* outShaderModule)
 {

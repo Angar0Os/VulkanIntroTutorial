@@ -3,12 +3,6 @@
 #include <vk_engine.h>
 #include <vector>
 
-namespace vkinit
-{
-	VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_info(VkShaderStageFlagBits stage, VkShaderModule shaderModule);
-}
-
-
 namespace vkutils
 {
 	bool load_shader_module(const char* filePath, VkDevice device, VkShaderModule* outShaderModule);
