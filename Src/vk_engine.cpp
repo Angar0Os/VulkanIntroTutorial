@@ -393,20 +393,15 @@ void DeletionQueue::flush()
 	deletors.clear();
 }
 
-
 void VulkanEngine::draw_background(VkCommandBuffer cmd)
 {
-	VkClearColorValue clearValue;
-	float flash = std::abs(std::sin(_frameNumber / 120.0f));
-	clearValue = { { 0.0f, 0.0f, flash, 1.0f } };
+	ComputeEffect& effect = backgroundEffects[currentBackgroundEffect];
 
-	VkImageSubresourceRange clearRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
-
-	vkCmdClearColorImage(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
-
-	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipeline);
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, effect.pipeline);
 
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipelineLayout, 0, 1, &_drawImageDescriptors, 0, nullptr);
+
+	vkCmdPushConstants(cmd, _gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePushConstants), &effect.data);
 
 	vkCmdDispatch(cmd, std::ceil(_drawExtent.width / 16.0), std::ceil(_drawExtent.height / 16.0), 1);
 }
@@ -452,23 +447,41 @@ void VulkanEngine::init_descriptors()
 
 void VulkanEngine::init_background_pipelines()
 {
-	VkPipelineLayoutCreateInfo computeLayout{ .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+	VkPipelineLayoutCreateInfo computeLayout{};
+	computeLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	computeLayout.pNext = nullptr;
 	computeLayout.pSetLayouts = &_drawImageDescriptorLayout;
 	computeLayout.setLayoutCount = 1;
+
+	VkPushConstantRange pushConstant{};
+	pushConstant.offset = 0;
+	pushConstant.size = sizeof(ComputePushConstants);
+	pushConstant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+	computeLayout.pPushConstantRanges = &pushConstant;
+	computeLayout.pushConstantRangeCount = 1;
 
 	vkCreatePipelineLayout(_device, &computeLayout, nullptr, &_gradientPipelineLayout);
 
 	VkShaderModule computeDrawShader;
-	if (!vkutils::load_shader_module("../Src/gradient.comp.spv", _device, &computeDrawShader))
+
+	VkShaderModule gradientShader;
+	if (!vkutils::load_shader_module("../Src/gradient_color.comp.spv", _device, &gradientShader)) 
 	{
-		std::cout << "Error when building the compute shader \n" << std::endl;
+		std::cout << "Error when building the compute shader" << std::endl;
+	}
+
+	VkShaderModule skyShader;
+	if (!vkutils::load_shader_module("../Src/sky.comp.spv", _device, &skyShader)) 
+	{
+		std::cout << "Error when building the compute shader" << std::endl;
 	}
 
 	VkPipelineShaderStageCreateInfo stageinfo{};
 	stageinfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	stageinfo.pNext = nullptr;
 	stageinfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-	stageinfo.module = computeDrawShader;
+	stageinfo.module = gradientShader;
 	stageinfo.pName = "main";
 
 	VkComputePipelineCreateInfo computePipelineCreateInfo{};
@@ -477,13 +490,36 @@ void VulkanEngine::init_background_pipelines()
 	computePipelineCreateInfo.layout = _gradientPipelineLayout;
 	computePipelineCreateInfo.stage = stageinfo;
 
-	vkCreateComputePipelines(_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &_gradientPipeline);
+	ComputeEffect gradient;
+	gradient.layout = _gradientPipelineLayout;
+	gradient.name = "gradient";
+	gradient.data = {};
 
-	vkDestroyShaderModule(_device, computeDrawShader, nullptr);
+	gradient.data.data1 = glm::vec4(1, 0, 0, 1);
+	gradient.data.data2 = glm::vec4(0, 0, 1, 1);
 
-	_mainDeletionQueue.push_function([&]() {
+	vkCreateComputePipelines(_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &gradient.pipeline);
+
+	computePipelineCreateInfo.stage.module = skyShader;
+
+	ComputeEffect sky;
+	sky.layout = _gradientPipelineLayout;
+	sky.name = "sky";
+	sky.data = {};
+	sky.data.data1 = glm::vec4(0.1, 0.2, 0.4, 0.97);
+
+	vkCreateComputePipelines(_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &sky.pipeline);
+
+	backgroundEffects.push_back(gradient);
+	backgroundEffects.push_back(sky);
+
+	vkDestroyShaderModule(_device, gradientShader, nullptr);
+	vkDestroyShaderModule(_device, skyShader, nullptr);
+
+	_mainDeletionQueue.push_function([=]() {
 		vkDestroyPipelineLayout(_device, _gradientPipelineLayout, nullptr);
-		vkDestroyPipeline(_device, _gradientPipeline, nullptr);
+		vkDestroyPipeline(_device, sky.pipeline, nullptr);
+		vkDestroyPipeline(_device, gradient.pipeline, nullptr);
 		});
 }
 

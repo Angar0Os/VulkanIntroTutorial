@@ -12,6 +12,8 @@
 
 #include <vk_types.h>
 
+#include <glm/glm.hpp>
+
 struct GLFWwindow;
 
 struct AllocatedImage 
@@ -21,6 +23,24 @@ struct AllocatedImage
 	VmaAllocation allocation;
 	VkExtent3D imageExtent;
 	VkFormat imageFormat;
+};
+
+struct ComputePushConstants
+{
+	glm::vec4 data1;
+	glm::vec4 data2;
+	glm::vec4 data3;
+	glm::vec4 data4;
+};
+
+struct ComputeEffect 
+{
+	const char* name;
+
+	VkPipeline pipeline;
+	VkPipelineLayout layout;
+
+	ComputePushConstants data;
 };
 
 
@@ -98,6 +118,9 @@ public:
 	VkQueue _graphicsQueue;
 
 	uint32_t _graphicsQueueFamily;
+
+	std::vector<ComputeEffect> backgroundEffects;
+	int currentBackgroundEffect{ 0 };
 
 	DeletionQueue _mainDeletionQueue;
 
