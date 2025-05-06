@@ -40,7 +40,7 @@ std::optional<std::vector<std::shared_ptr<MeshAsset>>> loadGltfMeshes(VulkanEngi
         gltf = std::move(load.get());
     }
     else {
-        std::cout << "Failed to load glTF: {} \n" << fastgltf::to_underlying(load.error()) << std::endl;
+        std::cout << "Failed to load glTF: " << fastgltf::to_underlying(load.error()) << std::endl;
         return {};
     }
     std::vector<std::shared_ptr<MeshAsset>> meshes;

@@ -58,12 +58,14 @@ struct DeletionQueue
 
 struct FrameData
 {
-	VkCommandPool _commandPool;
-	VkCommandBuffer _mainCommandBuffer;
-	DeletionQueue _deletionQueue;
-
 	VkSemaphore _swapchainSemaphore, _renderSemaphore;
 	VkFence _renderFence;
+
+	VkCommandPool _commandPool;
+	VkCommandBuffer _mainCommandBuffer;
+
+	DeletionQueue _deletionQueue;
+	DescriptorAllocatorGrowable _frameDescriptors;
 };
 
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -87,6 +89,7 @@ public:
 
 	VkDescriptorSet _drawImageDescriptors;
 	VkDescriptorSetLayout _drawImageDescriptorLayout;
+	VkDescriptorSetLayout _gpuSceneDataDescriptorLayout;
 	
 	VkSwapchainKHR _swapchain;
 	VkFormat _swapchainImageFormat;
@@ -121,6 +124,10 @@ public:
 
 	FrameData _frames[FRAME_OVERLAP];
 	FrameData& get_current_frame() {return _frames[_frameNumber % FRAME_OVERLAP]; };
+
+	AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+	AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+	void destroy_image(const AllocatedImage& img);
 
 	VkQueue _graphicsQueue;
 

@@ -268,6 +268,10 @@ void VulkanEngine::init_sync_structures()
 void VulkanEngine::draw()
 {
 	vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000);
+	
+	get_current_frame()._deletionQueue.flush();
+	get_current_frame()._frameDescriptors.clear_pools(_device);
+
 	vkResetFences(_device, 1, &get_current_frame()._renderFence);
 
 	uint32_t swapchainImageIndex;
@@ -377,6 +381,20 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd)
 
 	//vkCmdDrawIndexed(cmd, 6, 1, 0, 0, 0);
 
+	AllocatedBuffer gpuSceneDataBuffer = create_buffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+	get_current_frame()._deletionQueue.push_function([=, this]() {
+		destroy_buffer(gpuSceneDataBuffer);
+		});
+
+	GPUSceneData* sceneUniformData = (GPUSceneData*)gpuSceneDataBuffer.allocation->GetMappedData();
+
+	VkDescriptorSet globalDescriptor = get_current_frame()._frameDescriptors.allocate(_device, _gpuSceneDataDescriptorLayout);
+
+	DescriptorWriter writer;
+	writer.write_buffer(0, gpuSceneDataBuffer.buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	writer.update_set(_device, globalDescriptor);
+
 	glm::mat4 view = glm::translate(glm::vec3{ 0, 0, -5 });
 	glm::mat4 projection = glm::perspective(glm::radians(70.0f), (float)_drawExtent.width / (float)_drawExtent.height, 0.01f, 100.0f);
 	projection[1][1] *= -1;
@@ -474,26 +492,30 @@ void VulkanEngine::init_descriptors()
 
 	_drawImageDescriptors = globalDescriptorAllocator.allocate(_device, _drawImageDescriptorLayout);
 
-	VkDescriptorImageInfo imgInfo{};
-	imgInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-	imgInfo.imageView = _drawImage.imageView;
+	DescriptorWriter writer;
+	writer.write_image(0, _drawImage.imageView, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+	writer.update_set(_device, _drawImageDescriptors);
 
-	VkWriteDescriptorSet drawImageWrite = {};
-	drawImageWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	drawImageWrite.pNext = nullptr;
+	DescriptorLayoutBuilder builder;
+	builder.add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	_gpuSceneDataDescriptorLayout = builder.build(_device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 
-	drawImageWrite.dstBinding = 0;
-	drawImageWrite.dstSet = _drawImageDescriptors;
-	drawImageWrite.descriptorCount = 1;
-	drawImageWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	drawImageWrite.pImageInfo = &imgInfo;
+	for (int i = 0; i < FRAME_OVERLAP; i++) 
+	{
+		std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> frame_sizes = {
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 },
+		};
 
-	vkUpdateDescriptorSets(_device, 1, &drawImageWrite, 0, nullptr);
+		_frames[i]._frameDescriptors = DescriptorAllocatorGrowable{};
+		_frames[i]._frameDescriptors.init(_device, 1000, frame_sizes);
 
-	_mainDeletionQueue.push_function([&]() {
-		globalDescriptorAllocator.destroy_pool(_device);
-		vkDestroyDescriptorSetLayout(_device, _drawImageDescriptorLayout, nullptr);
-		});
+		_mainDeletionQueue.push_function([&, i]() {
+			_frames[i]._frameDescriptors.destroy_pools(_device);
+			});
+	}
 }
 
 void VulkanEngine::init_background_pipelines()
@@ -611,7 +633,9 @@ void VulkanEngine::init_mesh_pipeline()
 	pipelineBuilder.set_polygon_mode(VK_POLYGON_MODE_FILL);
 	pipelineBuilder.set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
 	pipelineBuilder.set_multisampling_none();
-	pipelineBuilder.disable_blending();
+	
+	//pipelineBuilder.disable_blending();
+	pipelineBuilder.enable_blending_additive();
 
 	pipelineBuilder.enable_depthtest(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
@@ -632,7 +656,7 @@ void VulkanEngine::init_mesh_pipeline()
 void VulkanEngine::init_default_data()
 {
 	std::array<Vertex, 4> rect_vertices;
-	testMeshes = loadGltfMeshes(this, "../assets/basicmesh.glb").value();
+	testMeshes = *loadGltfMeshes(this, "../assets/basicmesh.glb");
 
 	rect_vertices[0].position = { 0.5,-0.5, 0 };
 	rect_vertices[1].position = { 0.5,0.5, 0 };
@@ -750,4 +774,75 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 
 	vkQueueSubmit2(_graphicsQueue, 1, &submit, _immFence);
 	vkWaitForFences(_device, 1, &_immFence, true, 9999999999);
+}
+
+AllocatedImage VulkanEngine::create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
+{
+	AllocatedImage newImage;
+	newImage.imageFormat = format;
+	newImage.imageExtent = size;
+
+	VkImageCreateInfo img_info = vkinit::image_create_info(format, usage, size);
+	if (mipmapped)
+	{
+		img_info.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(size.width, size.height)))) + 1;
+	}
+
+	VmaAllocationCreateInfo allocinfo = {};
+	allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	vmaCreateImage(_allocator, &img_info, &allocinfo, &newImage.image, &newImage.allocation, nullptr);
+
+	VkImageAspectFlags aspectFlag = VK_IMAGE_ASPECT_COLOR_BIT;
+	if (format == VK_FORMAT_D32_SFLOAT)
+	{
+		aspectFlag = VK_IMAGE_ASPECT_DEPTH_BIT;
+	}
+
+	VkImageViewCreateInfo view_info = vkinit::imageview_create_info(format, newImage.image, aspectFlag);
+	view_info.subresourceRange.levelCount = img_info.mipLevels;
+
+	vkCreateImageView(_device, &view_info, nullptr, &newImage.imageView);
+
+	return newImage;
+}
+
+AllocatedImage VulkanEngine::create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
+{
+	size_t data_size = size.depth * size.width * size.height * 4;
+	AllocatedBuffer uploadBuffer = create_buffer(data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+	memcpy(uploadBuffer.info.pMappedData, data, data_size);
+
+	AllocatedImage new_image = create_image(size, format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped);
+
+	immediate_submit([&](VkCommandBuffer cmd) {
+		vkutils::transition_image(cmd, new_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+		VkBufferImageCopy copyRegion = {};
+		copyRegion.bufferOffset = 0;
+		copyRegion.bufferRowLength = 0;
+		copyRegion.bufferImageHeight = 0;
+
+		copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copyRegion.imageSubresource.mipLevel = 0;
+		copyRegion.imageSubresource.baseArrayLayer = 0;
+		copyRegion.imageSubresource.layerCount = 1;
+		copyRegion.imageExtent = size;
+
+		vkCmdCopyBufferToImage(cmd, uploadBuffer.buffer, new_image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+
+		vkutils::transition_image(cmd, new_image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		});
+
+	destroy_buffer(uploadBuffer);
+
+	return new_image;
+}
+
+void VulkanEngine::destroy_image(const AllocatedImage& img)
+{
+	vkDestroyImageView(_device, img.imageView, nullptr);
+	vmaDestroyImage(_allocator, img.image, img.allocation);
 }
