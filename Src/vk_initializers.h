@@ -19,4 +19,5 @@ namespace vkinit
 	VkPipelineLayoutCreateInfo		pipeline_layout_create_info();
 	VkRenderingAttachmentInfo		attachment_info(VkImageView view, VkClearValue* clear, VkImageLayout layout);
 	VkRenderingInfo					rendering_info(VkExtent2D renderExtent, VkRenderingAttachmentInfo* colorAttachment, VkRenderingAttachmentInfo* depthAttachment);
+	VkRenderingAttachmentInfo		depth_attachment_info(VkImageView view, VkImageLayout layout);
 }

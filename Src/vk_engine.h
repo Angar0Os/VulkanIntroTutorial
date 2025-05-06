@@ -5,6 +5,8 @@
 #include <functional>
 #include <vector>
 
+#include <vk_loader.h>
+
 #include <vma/vk_mem_alloc.h>
 
 #include <vk_types.h>
@@ -12,7 +14,9 @@
 #include <vk_descriptors.h>
 #include <vk_pipelines.h>
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
+#include <glm/gtx/transform.hpp>
 
 struct GLFWwindow;
 
@@ -91,6 +95,9 @@ public:
 	std::vector<VkImageView> _swapchainImageViews;
 	VkExtent2D _swapchainExtent;
 
+
+	std::vector<std::shared_ptr<MeshAsset>> testMeshes;
+
 	void init();
 	void draw();
 	void cleanup();
@@ -127,6 +134,8 @@ public:
 	VmaAllocator _allocator;
 
 	AllocatedImage _drawImage;
+	AllocatedImage _depthImage;
+
 	VkExtent2D _drawExtent;
 
 	VkPipelineLayout _meshPipelineLayout;
